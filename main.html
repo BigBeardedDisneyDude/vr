@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude VR — Main Street Magic</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- Post-processing (bloom) -->
+  <script src="https://cdn.jsdelivr.net/gh/akbartus/A-Frame-Component-Postprocessing@main/dist/post-processing.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lato:wght@300;400&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,35 +14,21 @@
     a-scene { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
 
     #overlay {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px;
-      pointer-events: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      z-index: 9999; display: flex; flex-direction: column;
+      align-items: center; padding: 16px; pointer-events: none;
     }
     #chat-box {
-      pointer-events: all;
-      width: min(580px, 96vw);
-      background: rgba(8, 4, 18, 0.88);
-      border: 1px solid rgba(212, 175, 55, 0.45);
-      border-radius: 14px;
-      backdrop-filter: blur(18px);
-      padding: 14px;
-      font-family: 'Lato', sans-serif;
-      color: #f5e6c8;
+      pointer-events: all; width: min(580px, 96vw);
+      background: rgba(8,4,18,0.88); border: 1px solid rgba(212,175,55,0.45);
+      border-radius: 14px; backdrop-filter: blur(18px); padding: 14px;
+      font-family: 'Lato', sans-serif; color: #f5e6c8;
       box-shadow: 0 0 40px rgba(212,175,55,0.12), 0 8px 32px rgba(0,0,0,0.7);
     }
     #chat-log {
-      max-height: 180px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      font-size: 13.5px;
-      line-height: 1.65;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(212,175,55,0.25) transparent;
+      max-height: 180px; overflow-y: auto; margin-bottom: 10px;
+      font-size: 13.5px; line-height: 1.65;
+      scrollbar-width: thin; scrollbar-color: rgba(212,175,55,0.25) transparent;
     }
     .msg { margin-bottom: 8px; }
     .msg.user::before { content: "YOU  "; font-weight: 700; font-size: 10px; letter-spacing: 0.1em; color: #d4af37; }
@@ -50,250 +38,626 @@
     .msg.system { color: rgba(212,175,55,0.45); font-size: 11.5px; font-style: italic; text-align: center; margin-bottom: 6px; }
     #input-row { display: flex; gap: 7px; }
     #user-input {
-      flex: 1;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(212,175,55,0.28);
-      border-radius: 9px;
-      color: #f5e6c8;
-      font-family: 'Lato', sans-serif;
-      font-size: 13.5px;
-      padding: 9px 13px;
-      outline: none;
-      transition: border-color 0.2s;
+      flex: 1; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(212,175,55,0.28); border-radius: 9px;
+      color: #f5e6c8; font-family: 'Lato', sans-serif; font-size: 13.5px;
+      padding: 9px 13px; outline: none; transition: border-color 0.2s;
     }
     #user-input:focus { border-color: rgba(212,175,55,0.65); }
     #user-input::placeholder { color: rgba(245,230,200,0.25); }
     .btn {
       background: linear-gradient(135deg, #c9a227, #8a6010);
-      border: none; border-radius: 9px;
-      color: #1a0f00;
-      font-family: 'Cinzel', serif;
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.06em;
-      padding: 9px 15px;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s;
-      white-space: nowrap;
+      border: none; border-radius: 9px; color: #1a0f00;
+      font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.06em; padding: 9px 15px; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s; white-space: nowrap;
     }
     .btn:hover { opacity: 0.82; }
     .btn:active { transform: scale(0.96); }
     .btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    #mic-btn {
-      background: rgba(126,200,227,0.12);
-      border: 1px solid rgba(126,200,227,0.35);
-      color: #7ec8e3;
-    }
+    #mic-btn { background: rgba(126,200,227,0.12); border: 1px solid rgba(126,200,227,0.35); color: #7ec8e3; }
     #mic-btn.listening { background: rgba(126,200,227,0.28); border-color: #7ec8e3; animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
     #controls-hint {
-      font-family: 'Cinzel', serif;
-      font-size: 10.5px;
-      letter-spacing: 0.09em;
-      color: rgba(212,175,55,0.38);
-      text-align: center;
-      margin-top: 9px;
+      font-family: 'Cinzel', serif; font-size: 10.5px; letter-spacing: 0.09em;
+      color: rgba(212,175,55,0.38); text-align: center; margin-top: 9px;
     }
   </style>
 </head>
 <body>
 
 <a-scene
-  fog="type: exponential; color: #0c0818; density: 0.018"
+  post-processing="effect: bloom; bloomParams: threshold: 0.3, strength: 0.9, radius: 0.6, exposure: 1.1"
+  fog="type: exponential; color: #08051a; density: 0.014"
   renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; logarithmicDepthBuffer: true"
+  shadow="type: pcfsoft"
   vr-mode-ui="enabled: true"
   loading-screen="backgroundColor: #050210; dotsColor: #d4af37"
 >
 
-  <!-- SKY -->
-  <a-sky color="#080514"></a-sky>
-  <!-- Horizon warm glow cylinders -->
-  <a-cylinder position="0 -1 0" radius="55" height="6" color="#3a1a08" open-ended="true" side="back" opacity="0.55"></a-cylinder>
-  <a-cylinder position="0 -0.5 0" radius="54" height="3" color="#7a3010" open-ended="true" side="back" opacity="0.25"></a-cylinder>
+  <!-- ══════════════════════════════════════════════
+       PROCEDURAL TEXTURES via canvas
+  ══════════════════════════════════════════════ -->
+  <a-assets>
+    <!-- Brick texture -->
+    <canvas id="brick-canvas" width="256" height="256" style="display:none"></canvas>
+    <!-- Stone texture -->
+    <canvas id="stone-canvas" width="256" height="256" style="display:none"></canvas>
+    <!-- Wood plank texture -->
+    <canvas id="wood-canvas" width="256" height="128" style="display:none"></canvas>
+    <!-- Cobble texture -->
+    <canvas id="cobble-canvas" width="256" height="256" style="display:none"></canvas>
+  </a-assets>
 
-  <!-- LIGHTING -->
-  <a-light type="ambient" color="#1a0a2e" intensity="0.9"></a-light>
-  <a-light type="directional" color="#ffe0a0" intensity="0.5" position="2 8 4"></a-light>
-  <a-light type="directional" color="#d4af37" intensity="0.35" position="0 6 -20"></a-light>
-  <a-light type="directional" color="#2030a0" intensity="0.15" position="0 10 0"></a-light>
+  <!-- ══════════════════════════════════════════════
+       SKY — deep indigo with painted clouds
+  ══════════════════════════════════════════════ -->
+  <a-sky id="nightsky" color="#07041a"></a-sky>
 
-  <!-- GROUND -->
-  <a-plane rotation="-90 0 0" width="80" height="80" color="#18121e" position="0 0 0"></a-plane>
-  <!-- Street -->
-  <a-plane rotation="-90 0 0" position="0 0.005 0" width="5.5" height="80" color="#1f1828" opacity="0.9"></a-plane>
-  <!-- Gold center line -->
-  <a-plane rotation="-90 0 0" position="0 0.01 0" width="0.07" height="60" color="#d4af37" opacity="0.2"></a-plane>
-  <!-- Sidewalks -->
-  <a-plane rotation="-90 0 0" position="-5.5 0.01 0" width="3" height="60" color="#231c30"></a-plane>
-  <a-plane rotation="-90 0 0" position="5.5 0.01 0" width="3" height="60" color="#231c30"></a-plane>
-  <!-- Curbs -->
-  <a-box position="-4.05 0.06 0" width="0.12" height="0.12" depth="60" color="#2e2440"></a-box>
-  <a-box position="4.05 0.06 0" width="0.12" height="0.12" depth="60" color="#2e2440"></a-box>
+  <!-- Moon -->
+  <a-sphere position="12 22 -50" radius="1.4" color="#f0e8c8" emit="true"
+    material="color: #f0e8c8; emissive: #c8b878; emissiveIntensity: 0.8; roughness: 0.9"></a-sphere>
+  <a-light type="point" color="#c8b878" intensity="0.3" position="12 22 -50" distance="200" decay="1"></a-light>
 
-  <!-- LEFT BUILDINGS -->
-  <!-- L1 -->
-  <a-box position="-9 3 -2" width="6" height="6" depth="3" color="#2a1f38"></a-box>
-  <a-box position="-9 6.5 -2" width="6" height="1.2" depth="3" color="#1e1628"></a-box>
-  <a-plane position="-10.5 3.8 -0.49" width="1.1" height="1.4" color="#ffe0a0" opacity="0.6"></a-plane>
-  <a-plane position="-9 3.8 -0.49" width="1.1" height="1.4" color="#ffc060" opacity="0.5"></a-plane>
-  <a-plane position="-7.5 3.8 -0.49" width="1.1" height="1.4" color="#ffe0a0" opacity="0.55"></a-plane>
-  <a-light type="point" color="#ffe4a0" intensity="0.4" position="-9 3.8 -0.3" distance="4" decay="2"></a-light>
-  <a-box position="-9 0.8 -0.2" width="5.8" height="1.6" depth="0.5" color="#221838"></a-box>
-  <a-box position="-9 1.85 -0.1" width="5.8" height="0.12" depth="1.4" color="#8b1a1a" rotation="-12 0 0"></a-box>
+  <!-- Warm horizon glow — like park lights bleeding into sky -->
+  <a-cylinder position="0 -2 0" radius="58" height="8" color="#3d1a06" open-ended="true" side="back" opacity="0.7"></a-cylinder>
+  <a-cylinder position="0 -1 0" radius="57" height="4" color="#7a3510" open-ended="true" side="back" opacity="0.4"></a-cylinder>
+  <a-cylinder position="0 0 0" radius="56" height="2" color="#b05020" open-ended="true" side="back" opacity="0.15"></a-cylinder>
 
-  <!-- L2 -->
-  <a-box position="-9 4 -8" width="6" height="8" depth="3" color="#241b33"></a-box>
-  <a-box position="-9 8.2 -8" width="6.3" height="0.9" depth="3.2" color="#1a1225"></a-box>
-  <a-plane position="-11 5 -6.49" width="1" height="1.5" color="#ffe0a0" opacity="0.5"></a-plane>
-  <a-plane position="-9 5 -6.49" width="1" height="1.5" color="#ffd070" opacity="0.45"></a-plane>
-  <a-plane position="-7 5 -6.49" width="1" height="1.5" color="#ffe0a0" opacity="0.5"></a-plane>
-  <a-light type="point" color="#ffe4a0" intensity="0.4" position="-9 5 -6" distance="4" decay="2"></a-light>
-  <a-box position="-10.5 1.8 -6.7" width="0.12" height="3.6" depth="0.12" color="#3a2a10"></a-box>
-  <a-box position="-7.5 1.8 -6.7" width="0.12" height="3.6" depth="0.12" color="#3a2a10"></a-box>
+  <!-- ══════════════════════════════════════════════
+       TWINKLING STARS
+  ══════════════════════════════════════════════ -->
+  <a-sphere position="18 20 -45" radius="0.09" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:1;to:0.1;dur:2100;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-20 24 -50" radius="0.07" material="color:#d4af37;emissive:#d4af37;emissiveIntensity:1" animation="property:opacity;from:0.9;to:0.1;dur:3200;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="9 27 -55" radius="0.08" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:1;to:0.15;dur:1800;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-12 21 -48" radius="0.06" material="color:#bbd4ff;emissive:#bbd4ff;emissiveIntensity:1" animation="property:opacity;from:0.8;to:0.1;dur:2600;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="25 18 -40" radius="0.08" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:0.9;to:0.15;dur:2900;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-28 22 -42" radius="0.07" material="color:#d4af37;emissive:#d4af37;emissiveIntensity:1" animation="property:opacity;from:0.7;to:0.1;dur:3500;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="4 30 -60" radius="0.09" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:0.85;to:0.1;dur:2300;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="14 23 -52" radius="0.06" material="color:#ffc0e0;emissive:#ffc0e0;emissiveIntensity:1" animation="property:opacity;from:0.7;to:0.1;dur:3800;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-16 26 -58" radius="0.07" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:0.8;to:0.12;dur:2700;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="30 19 -44" radius="0.06" material="color:#d4af37;emissive:#d4af37;emissiveIntensity:1" animation="property:opacity;from:0.6;to:0.08;dur:4100;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-5 32 -65" radius="0.07" material="color:#fff;emissive:#fff;emissiveIntensity:1" animation="property:opacity;from:0.75;to:0.1;dur:3100;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="22 28 -55" radius="0.05" material="color:#bbd4ff;emissive:#bbd4ff;emissiveIntensity:1" animation="property:opacity;from:0.65;to:0.1;dur:2400;dir:alternate;loop:true"></a-sphere>
 
-  <!-- L3 -->
-  <a-box position="-9 3.5 -16" width="7" height="7" depth="3" color="#1e1628"></a-box>
-  <a-box position="-9 7.2 -16" width="7.3" height="1" depth="3.2" color="#160f20"></a-box>
-  <a-plane position="-11 4.5 -14.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.4"></a-plane>
-  <a-plane position="-9 4.5 -14.49" width="1.1" height="1.5" color="#ffd070" opacity="0.35"></a-plane>
-  <a-plane position="-7 4.5 -14.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.4"></a-plane>
-  <a-light type="point" color="#ffd080" intensity="0.3" position="-9 4.5 -14" distance="5" decay="2"></a-light>
+  <!-- ══════════════════════════════════════════════
+       GLOBAL LIGHTING
+  ══════════════════════════════════════════════ -->
+  <a-light type="ambient" color="#0d0828" intensity="1.2"></a-light>
+  <!-- Moonlight -->
+  <a-light type="directional" color="#c8c0f0" intensity="0.25" position="12 22 -10" cast-shadow="true"></a-light>
+  <!-- Warm park overhead glow -->
+  <a-light type="directional" color="#ffe0a0" intensity="0.2" position="0 8 0"></a-light>
+  <!-- Castle backlight -->
+  <a-light type="directional" color="#d4af37" intensity="0.3" position="0 8 -25"></a-light>
 
-  <!-- RIGHT BUILDINGS -->
-  <!-- R1 -->
-  <a-box position="9 3.5 -2" width="6" height="7" depth="3" color="#28203a"></a-box>
-  <a-box position="9 7.2 -2" width="6.3" height="0.9" depth="3.2" color="#1c1528"></a-box>
-  <a-plane position="7.5 4 -0.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.6"></a-plane>
-  <a-plane position="9 4 -0.49" width="1.1" height="1.5" color="#ffc060" opacity="0.55"></a-plane>
-  <a-plane position="10.5 4 -0.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.6"></a-plane>
-  <a-light type="point" color="#ffe4a0" intensity="0.4" position="9 4 -0.3" distance="4" decay="2"></a-light>
-  <a-box position="9 0.8 -0.2" width="5.8" height="1.6" depth="0.5" color="#221838"></a-box>
-  <a-box position="9 1.85 -0.1" width="5.8" height="0.12" depth="1.4" color="#1a5c2a" rotation="-12 0 0"></a-box>
+  <!-- ══════════════════════════════════════════════
+       GROUND — textured cobblestone street
+  ══════════════════════════════════════════════ -->
+  <!-- Base ground -->
+  <a-plane id="ground" rotation="-90 0 0" width="80" height="80" position="0 0 0"
+    material="color: #1a1428; roughness: 1; repeat: 8 8"></a-plane>
 
-  <!-- R2 -->
-  <a-box position="9 5 -8" width="6" height="10" depth="3" color="#22183a"></a-box>
-  <a-box position="9 10.2 -8" width="6.3" height="1" depth="3.2" color="#180f28"></a-box>
-  <a-plane position="7.5 6 -6.49" width="1" height="1.5" color="#ffd070" opacity="0.5"></a-plane>
-  <a-plane position="9 6 -6.49" width="1" height="1.5" color="#ffe0a0" opacity="0.55"></a-plane>
-  <a-plane position="10.5 6 -6.49" width="1" height="1.5" color="#ffd070" opacity="0.5"></a-plane>
-  <a-light type="point" color="#ffd080" intensity="0.45" position="9 6 -6" distance="5" decay="2"></a-light>
-  <a-box position="10.5 11.5 -8" width="1.2" height="3" depth="1.2" color="#1a1030"></a-box>
-  <a-cone position="10.5 13.5 -8" radius-bottom="0.8" radius-top="0.05" height="2.5" color="#8b0000"></a-cone>
+  <!-- Main street pavement — slightly lighter -->
+  <a-plane rotation="-90 0 0" position="0 0.008 0" width="6" height="70"
+    material="color: #201830; roughness: 0.95"></a-plane>
 
-  <!-- R3 -->
-  <a-box position="9 4 -16" width="7" height="8" depth="3" color="#1e1530"></a-box>
-  <a-box position="9 8.2 -16" width="7.3" height="1" depth="3.2" color="#140f22"></a-box>
-  <a-plane position="7 5 -14.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.4"></a-plane>
-  <a-plane position="9 5 -14.49" width="1.1" height="1.5" color="#ffd070" opacity="0.35"></a-plane>
-  <a-plane position="11 5 -14.49" width="1.1" height="1.5" color="#ffe0a0" opacity="0.4"></a-plane>
-  <a-light type="point" color="#ffd080" intensity="0.3" position="9 5 -14" distance="5" decay="2"></a-light>
+  <!-- Brick sidewalks -->
+  <a-plane rotation="-90 0 0" position="-5.6 0.01 0" width="3.2" height="70"
+    material="color: #2a1e38; roughness: 0.98" id="sidewalk-l"></a-plane>
+  <a-plane rotation="-90 0 0" position="5.6 0.01 0" width="3.2" height="70"
+    material="color: #2a1e38; roughness: 0.98" id="sidewalk-r"></a-plane>
 
-  <!-- LAMP POSTS — left -->
-  <a-entity position="-4.2 0 -3">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="1.2" position="1.1 3.4 0" distance="9" decay="2"></a-light>
-  </a-entity>
-  <a-entity position="-4.2 0 -10">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="1.0" position="1.1 3.4 0" distance="8" decay="2"></a-light>
-  </a-entity>
-  <a-entity position="-4.2 0 -17">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="0.8" position="1.1 3.4 0" distance="7" decay="2"></a-light>
-  </a-entity>
+  <!-- Curb edges with slight height -->
+  <a-box position="-4.1 0.07 0" width="0.15" height="0.14" depth="70" color="#2e2848"></a-box>
+  <a-box position="4.1 0.07 0" width="0.15" height="0.14" depth="70" color="#2e2848"></a-box>
 
-  <!-- LAMP POSTS — right -->
-  <a-entity position="4.2 0 -3">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="-0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="-1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="1.2" position="-1.1 3.4 0" distance="9" decay="2"></a-light>
-  </a-entity>
-  <a-entity position="4.2 0 -10">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="-0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="-1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="1.0" position="-1.1 3.4 0" distance="8" decay="2"></a-light>
-  </a-entity>
-  <a-entity position="4.2 0 -17">
-    <a-cylinder radius="0.07" height="3.5" color="#3a2a10" position="0 1.75 0"></a-cylinder>
-    <a-box width="1.2" height="0.06" depth="0.06" color="#3a2a10" position="-0.5 3.4 0"></a-box>
-    <a-sphere radius="0.22" color="#fff8e1" position="-1.1 3.4 0"></a-sphere>
-    <a-light type="point" color="#ffe4a0" intensity="0.8" position="-1.1 3.4 0" distance="7" decay="2"></a-light>
-  </a-entity>
+  <!-- Street center divider lines -->
+  <a-plane rotation="-90 0 0" position="-0.8 0.012 0" width="0.06" height="60" color="#d4af37" opacity="0.18"></a-plane>
+  <a-plane rotation="-90 0 0" position="0.8 0.012 0" width="0.06" height="60" color="#d4af37" opacity="0.18"></a-plane>
 
-  <!-- CASTLE -->
-  <a-box position="0 1.5 -28" width="18" height="3" depth="2" color="#160e25"></a-box>
-  <a-cylinder position="0 2.5 -27.1" radius="1.5" height="4" color="#0e0818" rotation="90 0 0"></a-cylinder>
-  <a-box position="0 8 -28" width="3" height="13" depth="3" color="#130c22"></a-box>
-  <a-cone position="0 15.5 -28" radius-bottom="1.8" radius-top="0.06" height="5" color="#1a0f35"></a-cone>
-  <a-box position="-5 6 -28" width="2.2" height="9" depth="2.2" color="#110a1e"></a-box>
-  <a-cone position="-5 11.5 -28" radius-bottom="1.3" radius-top="0.06" height="4.5" color="#160c2e"></a-cone>
-  <a-box position="5 6 -28" width="2.2" height="9" depth="2.2" color="#110a1e"></a-box>
-  <a-cone position="5 11.5 -28" radius-bottom="1.3" radius-top="0.06" height="4.5" color="#160c2e"></a-cone>
-  <a-box position="-9 4.5 -28" width="1.6" height="6" depth="1.6" color="#0f0819"></a-box>
-  <a-cone position="-9 8 -28" radius-bottom="0.95" radius-top="0.05" height="3.5" color="#130a22"></a-cone>
-  <a-box position="9 4.5 -28" width="1.6" height="6" depth="1.6" color="#0f0819"></a-box>
-  <a-cone position="9 8 -28" radius-bottom="0.95" radius-top="0.05" height="3.5" color="#130a22"></a-cone>
-  <a-light type="point" color="#d4af37" intensity="2.5" position="0 2 -25" distance="18" decay="1.5"></a-light>
-  <a-light type="point" color="#ff8030" intensity="1.2" position="-5 3 -25" distance="10" decay="2"></a-light>
-  <a-light type="point" color="#ff8030" intensity="1.2" position="5 3 -25" distance="10" decay="2"></a-light>
-  <a-light type="point" color="#7080ff" intensity="0.5" position="0 10 -28" distance="20" decay="2"></a-light>
+  <!-- Sidewalk border trim -->
+  <a-box position="-4.16 0.1 0" width="0.08" height="0.2" depth="70"
+    material="color: #d4af37; emissive: #d4af37; emissiveIntensity: 0.15" opacity="0.6"></a-box>
+  <a-box position="4.16 0.1 0" width="0.08" height="0.2" depth="70"
+    material="color: #d4af37; emissive: #d4af37; emissiveIntensity: 0.15" opacity="0.6"></a-box>
 
-  <!-- TWINKLING STARS -->
-  <a-sphere position="15 18 -30" radius="0.08" color="#fff" opacity="0.8" animation="property:opacity;from:0.8;to:0.2;dur:2100;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-18 22 -35" radius="0.06" color="#d4af37" opacity="0.6" animation="property:opacity;from:0.6;to:0.1;dur:3200;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="8 25 -40" radius="0.07" color="#fff" opacity="0.7" animation="property:opacity;from:0.7;to:0.2;dur:1800;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-10 20 -45" radius="0.05" color="#7ec8e3" opacity="0.5" animation="property:opacity;from:0.5;to:0.1;dur:2600;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="20 16 -25" radius="0.07" color="#fff" opacity="0.6" animation="property:opacity;from:0.6;to:0.15;dur:2900;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-22 19 -28" radius="0.06" color="#d4af37" opacity="0.5" animation="property:opacity;from:0.5;to:0.1;dur:3500;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="3 28 -50" radius="0.08" color="#fff" opacity="0.65" animation="property:opacity;from:0.65;to:0.1;dur:2300;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="12 21 -38" radius="0.055" color="#ffc0e0" opacity="0.55" animation="property:opacity;from:0.55;to:0.1;dur:3800;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-14 24 -42" radius="0.06" color="#fff" opacity="0.6" animation="property:opacity;from:0.6;to:0.12;dur:2700;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="25 17 -33" radius="0.05" color="#d4af37" opacity="0.45" animation="property:opacity;from:0.45;to:0.08;dur:4100;dir:alternate;loop:true"></a-sphere>
+  <!-- ══════════════════════════════════════════════
+       LEFT BUILDINGS — Victorian commercial row
+  ══════════════════════════════════════════════ -->
 
-  <!-- FIREFLY SPARKLES -->
-  <a-sphere position="-2 1.8 -5" radius="0.04" color="#d4af37" opacity="0.8"
-    animation__p="property:position;to:-2.3 2.4 -5.2;dur:3000;dir:alternate;loop:true;easing:easeInOutSine"
-    animation__o="property:opacity;from:0.8;to:0.1;dur:2000;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="2.5 1.5 -7" radius="0.035" color="#7ec8e3" opacity="0.7"
-    animation__p="property:position;to:2.2 2.2 -6.8;dur:3500;dir:alternate;loop:true;easing:easeInOutSine"
-    animation__o="property:opacity;from:0.7;to:0.1;dur:2500;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-1.5 2.2 -12" radius="0.03" color="#fff0a0" opacity="0.6"
-    animation__p="property:position;to:-1.8 2.8 -12;dur:2800;dir:alternate;loop:true;easing:easeInOutSine"
-    animation__o="property:opacity;from:0.6;to:0.1;dur:3200;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="1 1.6 -4" radius="0.045" color="#ffa0c0" opacity="0.5"
-    animation__p="property:position;to:1.4 2.3 -4.3;dur:4000;dir:alternate;loop:true;easing:easeInOutSine"
-    animation__o="property:opacity;from:0.5;to:0.05;dur:2200;dir:alternate;loop:true"></a-sphere>
-  <a-sphere position="-3 1.4 -9" radius="0.03" color="#d4af37" opacity="0.65"
-    animation__p="property:position;to:-3.3 2.0 -9.2;dur:3200;dir:alternate;loop:true;easing:easeInOutSine"
-    animation__o="property:opacity;from:0.65;to:0.1;dur:2800;dir:alternate;loop:true"></a-sphere>
+  <!-- ─── BUILDING L1 — Emporium-style shop ─── -->
+  <a-entity position="-9.5 0 -2">
+    <!-- Main facade -->
+    <a-box position="0 4 0" width="7" height="8" depth="3.5"
+      material="color:#2c1f40;roughness:0.95;metalness:0.05"></a-box>
+    <!-- Upper decorative band -->
+    <a-box position="0 8.2 0" width="7.2" height="0.5" depth="3.6"
+      material="color:#3a2850;roughness:0.9"></a-box>
+    <!-- Cornice -->
+    <a-box position="0 8.65 0" width="7.4" height="0.35" depth="3.8"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.08;roughness:0.7;metalness:0.3"></a-box>
+    <!-- Parapet top -->
+    <a-box position="0 9.1 0" width="7.2" height="0.9" depth="3.5"
+      material="color:#281a38;roughness:0.95"></a-box>
 
-  <!-- CLAUDE PANEL -->
-  <a-entity id="claude-panel" position="0 1.6 -2.5">
-    <a-plane width="2.5" height="1.8" color="#3040a0" opacity="0.06" position="0 0 -0.06"></a-plane>
-    <a-plane width="2.2" height="1.5" color="#06030f" opacity="0.94"></a-plane>
-    <a-plane width="2.24" height="1.54" color="#d4af37" opacity="0.22" position="0 0 -0.002"></a-plane>
-    <a-plane width="2.2" height="0.27" color="#d4af37" opacity="0.1" position="0 0.615 0.002"></a-plane>
-    <a-text value="✦  CLAUDE  ✦" color="#d4af37" align="center" width="2" position="0 0.615 0.012" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
-    <a-text value="Main Street Magic" color="#7ec8e3" align="center" width="1.6" position="0 0.43 0.012" font="https://cdn.aframe.io/fonts/Exo2SemiBold.fnt"></a-text>
-    <a-text id="vr-display" value="Welcome, traveler.&#10;Ask me anything below." color="#f5e6c8" align="left" width="1.95" position="-0.9 0.28 0.012" wrap-count="44" baseline="top"></a-text>
-    <a-plane width="1.95" height="0.004" color="#d4af37" opacity="0.25" position="0 -0.43 0.01"></a-plane>
-    <a-text id="vr-status" value="Use the chat panel below" color="#d4af37" align="center" width="1.8" opacity="0.45" position="0 -0.61 0.012" font="https://cdn.aframe.io/fonts/Exo2SemiBold.fnt"></a-text>
-    <a-light type="point" color="#4060ff" intensity="0.3" position="0 0 0.5" distance="4" decay="2"></a-light>
+    <!-- Windows row 1 (upper) — arched suggestion -->
+    <a-box position="-2.2 6.2 1.76" width="1.3" height="1.8" depth="0.12"
+      material="color:#1a0f2e;roughness:0.9"></a-box>
+    <a-plane position="-2.2 6.2 1.83" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.6;opacity:0.85"></a-plane>
+    <a-box position="0 6.2 1.76" width="1.3" height="1.8" depth="0.12"
+      material="color:#1a0f2e;roughness:0.9"></a-box>
+    <a-plane position="0 6.2 1.83" width="1.0" height="1.5"
+      material="color:#ffc060;emissive:#ffc060;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+    <a-box position="2.2 6.2 1.76" width="1.3" height="1.8" depth="0.12"
+      material="color:#1a0f2e;roughness:0.9"></a-box>
+    <a-plane position="2.2 6.2 1.83" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.55;opacity:0.85"></a-plane>
+
+    <!-- Ground floor storefront -->
+    <a-box position="0 1.2 1.76" width="7" height="2.4" depth="0.12"
+      material="color:#221638;roughness:0.9"></a-box>
+    <!-- Large shop windows -->
+    <a-plane position="-2.0 1.2 1.84" width="2.0" height="1.9"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.35;opacity:0.5;transparent:true"></a-plane>
+    <a-plane position="2.0 1.2 1.84" width="2.0" height="1.9"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.35;opacity:0.5;transparent:true"></a-plane>
+    <!-- Door -->
+    <a-box position="0 1.0 1.84" width="0.9" height="2.0" depth="0.06"
+      material="color:#3a2810;roughness:0.8;metalness:0.2"></a-box>
+
+    <!-- Awning -->
+    <a-box position="0 2.85 2.3" width="6.5" height="0.12" depth="1.6"
+      rotation="-18 0 0"
+      material="color:#8b1a1a;roughness:0.8"></a-box>
+    <!-- Awning valance -->
+    <a-box position="0 2.05 2.95" width="6.5" height="0.35" depth="0.08"
+      material="color:#7a1515;roughness:0.8"></a-box>
+    <!-- Awning stripes -->
+    <a-box position="-2 2.85 2.3" width="0.25" height="0.14" depth="1.62" rotation="-18 0 0"
+      material="color:#c0c0c0;roughness:0.8" opacity="0.4"></a-box>
+    <a-box position="0 2.85 2.3" width="0.25" height="0.14" depth="1.62" rotation="-18 0 0"
+      material="color:#c0c0c0;roughness:0.8" opacity="0.4"></a-box>
+    <a-box position="2 2.85 2.3" width="0.25" height="0.14" depth="1.62" rotation="-18 0 0"
+      material="color:#c0c0c0;roughness:0.8" opacity="0.4"></a-box>
+
+    <!-- Columns flanking entrance -->
+    <a-cylinder position="-2.8 1.5 1.84" radius="0.1" height="3" color="#3a2a18" roughness="0.8"></a-cylinder>
+    <a-cylinder position="2.8 1.5 1.84" radius="0.1" height="3" color="#3a2a18" roughness="0.8"></a-cylinder>
+    <a-sphere position="-2.8 3.1 1.84" radius="0.12" color="#d4af37"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.3"></a-sphere>
+    <a-sphere position="2.8 3.1 1.84" radius="0.12" color="#d4af37"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.3"></a-sphere>
+
+    <!-- Interior window glow light -->
+    <a-light type="point" color="#ffe4a0" intensity="0.6" position="0 1.5 1.5" distance="4" decay="2"></a-light>
+    <a-light type="point" color="#ffc060" intensity="0.4" position="0 6 1.5" distance="3" decay="2"></a-light>
   </a-entity>
 
-  <!-- CAMERA RIG — WASD walkable, pointer-lock look -->
-  <a-entity id="rig" position="0 0 1.5">
+  <!-- ─── BUILDING L2 — Taller Victorian with tower ─── -->
+  <a-entity position="-9.5 0 -10">
+    <a-box position="0 5.5 0" width="7" height="11" depth="3.5"
+      material="color:#261a38;roughness:0.95;metalness:0.04"></a-box>
+    <!-- Decorative bands -->
+    <a-box position="0 4 1.76" width="7" height="0.2" depth="0.15"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.5"></a-box>
+    <a-box position="0 7 1.76" width="7" height="0.2" depth="0.15"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.5"></a-box>
+    <a-box position="0 11.2 0" width="7.3" height="0.4" depth="3.7"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.08;metalness:0.4"></a-box>
+    <a-box position="0 11.6 0" width="7" height="0.8" depth="3.4"
+      material="color:#1e1430;roughness:0.95"></a-box>
+
+    <!-- Windows upper floor -->
+    <a-box position="-2.2 8.5 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="-2.2 8.5 1.84" width="0.9" height="1.7"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.55;opacity:0.8"></a-plane>
+    <a-box position="0 8.5 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="0 8.5 1.84" width="0.9" height="1.7"
+      material="color:#ffc060;emissive:#ffc060;emissiveIntensity:0.45;opacity:0.75"></a-plane>
+    <a-box position="2.2 8.5 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="2.2 8.5 1.84" width="0.9" height="1.7"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+
+    <!-- Windows mid floor -->
+    <a-plane position="-2.2 5.5 1.84" width="1.0" height="1.5"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+    <a-plane position="0 5.5 1.84" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.45;opacity:0.8"></a-plane>
+    <a-plane position="2.2 5.5 1.84" width="1.0" height="1.5"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+
+    <!-- Ground floor -->
+    <a-box position="0 1.2 1.76" width="7" height="2.4" depth="0.12"
+      material="color:#201538;roughness:0.9"></a-box>
+    <a-plane position="-1.8 1.2 1.84" width="2.2" height="2.0"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+    <a-plane position="1.8 1.2 1.84" width="2.2" height="2.0"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+
+    <!-- Columns -->
+    <a-cylinder position="-3 1.8 1.84" radius="0.12" height="3.6" color="#3a2a18" roughness="0.7" metalness="0.2"></a-cylinder>
+    <a-cylinder position="3 1.8 1.84" radius="0.12" height="3.6" color="#3a2a18" roughness="0.7" metalness="0.2"></a-cylinder>
+
+    <!-- Side tower -->
+    <a-box position="4.2 7 0" width="2" height="14" depth="2"
+      material="color:#1e1530;roughness:0.95"></a-box>
+    <a-cone position="4.2 14.5 0" radius-bottom="1.3" radius-top="0.05" height="3.5"
+      material="color:#8b1a1a;roughness:0.7;metalness:0.2"></a-cone>
+    <!-- Tower window -->
+    <a-plane position="4.2 9 0.96" width="0.8" height="1.2"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+
+    <a-light type="point" color="#ffe4a0" intensity="0.5" position="0 5 1.5" distance="5" decay="2"></a-light>
+    <a-light type="point" color="#ffd080" intensity="0.4" position="0 9 1.5" distance="4" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ─── BUILDING L3 ─── -->
+  <a-entity position="-9.5 0 -19">
+    <a-box position="0 4.5 0" width="8" height="9" depth="3.5"
+      material="color:#231840;roughness:0.95"></a-box>
+    <a-box position="0 9.15 0" width="8.3" height="0.4" depth="3.7"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.08;metalness:0.4"></a-box>
+    <a-box position="0 9.6 0" width="8" height="1.0" depth="3.4"
+      material="color:#1a1232;roughness:0.95"></a-box>
+    <!-- Windows -->
+    <a-plane position="-2.8 6.5 1.76" width="1.1" height="1.6"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+    <a-plane position="-0.8 6.5 1.76" width="1.1" height="1.6"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.45;opacity:0.8"></a-plane>
+    <a-plane position="1.2 6.5 1.76" width="1.1" height="1.6"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+    <a-plane position="3.2 6.5 1.76" width="1.1" height="1.6"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.35;opacity:0.7"></a-plane>
+    <!-- Ground floor -->
+    <a-plane position="-2.0 1.5 1.77" width="2.4" height="2.2"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.25;opacity:0.4;transparent:true"></a-plane>
+    <a-plane position="2.0 1.5 1.77" width="2.4" height="2.2"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.25;opacity:0.4;transparent:true"></a-plane>
+    <a-light type="point" color="#ffd080" intensity="0.4" position="0 4 1.5" distance="5" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ══════════════════════════════════════════════
+       RIGHT BUILDINGS
+  ══════════════════════════════════════════════ -->
+
+  <!-- ─── BUILDING R1 — City Hall-ish ─── -->
+  <a-entity position="9.5 0 -2">
+    <a-box position="0 5 0" width="7" height="10" depth="3.5"
+      material="color:#2a2040;roughness:0.95;metalness:0.05"></a-box>
+    <!-- Symmetrical upper windows -->
+    <a-box position="-2.2 7 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="-2.2 7 1.84" width="0.9" height="1.7"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.6;opacity:0.85"></a-plane>
+    <a-box position="0 7 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="0 7 1.84" width="0.9" height="1.7"
+      material="color:#ffc060;emissive:#ffc060;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+    <a-box position="2.2 7 1.76" width="1.2" height="2.0" depth="0.12"
+      material="color:#18102c;roughness:0.9"></a-box>
+    <a-plane position="2.2 7 1.84" width="0.9" height="1.7"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.55;opacity:0.85"></a-plane>
+    <!-- Cornice + parapet -->
+    <a-box position="0 10.2 0" width="7.4" height="0.4" depth="3.8"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.5"></a-box>
+    <a-box position="0 10.7 0" width="7" height="1.2" depth="3.5"
+      material="color:#1e1530;roughness:0.95"></a-box>
+    <!-- Parapet notches (battlements) -->
+    <a-box position="-2.5 11.4 0" width="0.7" height="0.5" depth="3.5" color="#1e1530"></a-box>
+    <a-box position="0 11.4 0" width="0.7" height="0.5" depth="3.5" color="#1e1530"></a-box>
+    <a-box position="2.5 11.4 0" width="0.7" height="0.5" depth="3.5" color="#1e1530"></a-box>
+
+    <!-- Ground floor with columns -->
+    <a-box position="0 1.2 1.76" width="7" height="2.4" depth="0.12"
+      material="color:#221840;roughness:0.9"></a-box>
+    <a-plane position="-1.8 1.2 1.84" width="2.2" height="2.0"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+    <a-plane position="1.8 1.2 1.84" width="2.2" height="2.0"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+    <a-cylinder position="-3 1.8 1.84" radius="0.12" height="3.6" color="#3a2a18" roughness="0.7" metalness="0.2"></a-cylinder>
+    <a-cylinder position="3 1.8 1.84" radius="0.12" height="3.6" color="#3a2a18" roughness="0.7" metalness="0.2"></a-cylinder>
+    <!-- Green awning -->
+    <a-box position="0 2.85 2.3" width="6.5" height="0.12" depth="1.6"
+      rotation="-18 0 0" material="color:#1a5c2a;roughness:0.8"></a-box>
+    <a-box position="0 2.05 2.95" width="6.5" height="0.35" depth="0.08"
+      material="color:#164f24;roughness:0.8"></a-box>
+
+    <a-light type="point" color="#ffe4a0" intensity="0.6" position="0 1.5 1.5" distance="4" decay="2"></a-light>
+    <a-light type="point" color="#ffd080" intensity="0.4" position="0 7 1.5" distance="4" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ─── BUILDING R2 — Tall corner building ─── -->
+  <a-entity position="9.5 0 -10">
+    <a-box position="0 6.5 0" width="7" height="13" depth="3.5"
+      material="color:#221840;roughness:0.95;metalness:0.03"></a-box>
+    <!-- Horizontal band details -->
+    <a-box position="0 5 1.77" width="7" height="0.18" depth="0.14"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.5"></a-box>
+    <a-box position="0 9 1.77" width="7" height="0.18" depth="0.14"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.5"></a-box>
+    <a-box position="0 13.2 0" width="7.4" height="0.4" depth="3.8"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;metalness:0.4"></a-box>
+    <a-box position="0 13.7 0" width="7" height="1.2" depth="3.4"
+      material="color:#1a1230;roughness:0.95"></a-box>
+
+    <!-- Windows all floors -->
+    <a-plane position="-2.2 10.5 1.78" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.55;opacity:0.8"></a-plane>
+    <a-plane position="0 10.5 1.78" width="1.0" height="1.5"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.45;opacity:0.75"></a-plane>
+    <a-plane position="2.2 10.5 1.78" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+    <a-plane position="-2.2 7.2 1.78" width="1.0" height="1.5"
+      material="color:#ffc060;emissive:#ffc060;emissiveIntensity:0.45;opacity:0.75"></a-plane>
+    <a-plane position="0 7.2 1.78" width="1.0" height="1.5"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+    <a-plane position="2.2 7.2 1.78" width="1.0" height="1.5"
+      material="color:#ffc060;emissive:#ffc060;emissiveIntensity:0.45;opacity:0.75"></a-plane>
+    <!-- Ground floor -->
+    <a-plane position="-1.8 1.5 1.78" width="2.4" height="2.2"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+    <a-plane position="1.8 1.5 1.78" width="2.4" height="2.2"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.3;opacity:0.45;transparent:true"></a-plane>
+
+    <!-- Corner turret -->
+    <a-cylinder position="-3.8 8 -1.5" radius="0.9" height="16"
+      material="color:#1a1030;roughness:0.95"></a-cylinder>
+    <a-cone position="-3.8 16.5 -1.5" radius-bottom="1.1" radius-top="0.05" height="4"
+      material="color:#8b0000;roughness:0.7;metalness:0.2"></a-cone>
+    <a-plane position="-3.8 10 -0.58" width="0.7" height="1.0"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.5;opacity:0.8"></a-plane>
+
+    <a-light type="point" color="#ffe4a0" intensity="0.5" position="0 6 1.5" distance="5" decay="2"></a-light>
+    <a-light type="point" color="#ffd080" intensity="0.4" position="0 10 1.5" distance="4" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ─── BUILDING R3 ─── -->
+  <a-entity position="9.5 0 -19">
+    <a-box position="0 5 0" width="8" height="10" depth="3.5"
+      material="color:#241a3c;roughness:0.95"></a-box>
+    <a-box position="0 10.15 0" width="8.3" height="0.4" depth="3.7"
+      material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.08;metalness:0.4"></a-box>
+    <a-box position="0 10.7 0" width="8" height="1.2" depth="3.4"
+      material="color:#1c1430;roughness:0.95"></a-box>
+    <a-plane position="-2.8 7 1.77" width="1.1" height="1.6"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+    <a-plane position="-0.8 7 1.77" width="1.1" height="1.6"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.45;opacity:0.8"></a-plane>
+    <a-plane position="1.2 7 1.77" width="1.1" height="1.6"
+      material="color:#ffd080;emissive:#ffd080;emissiveIntensity:0.4;opacity:0.75"></a-plane>
+    <a-plane position="3.2 7 1.77" width="1.1" height="1.6"
+      material="color:#ffe8b0;emissive:#ffe8b0;emissiveIntensity:0.35;opacity:0.7"></a-plane>
+    <a-plane position="-2.0 2 1.78" width="2.4" height="2.4"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.25;opacity:0.4;transparent:true"></a-plane>
+    <a-plane position="2.0 2 1.78" width="2.4" height="2.4"
+      material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.25;opacity:0.4;transparent:true"></a-plane>
+    <a-light type="point" color="#ffd080" intensity="0.4" position="0 5 1.5" distance="5" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ══════════════════════════════════════════════
+       LAMP POSTS — Victorian double-headed style
+  ══════════════════════════════════════════════ -->
+
+  <!-- LEFT LAMPS -->
+  <a-entity position="-4.3 0 -3">
+    <!-- Post -->
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <!-- Base -->
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" roughness="0.7" metalness="0.5" position="0 0.1 0"></a-cylinder>
+    <!-- Arm left -->
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="-0.6 4.1 0"></a-box>
+    <!-- Arm right -->
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="0.6 4.1 0"></a-box>
+    <!-- Lamp globes -->
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <!-- Lamp light -->
+    <a-light type="point" color="#ffe4a0" intensity="1.8" position="0 4.1 0" distance="12" decay="2"></a-light>
+  </a-entity>
+
+  <a-entity position="-4.3 0 -11">
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" roughness="0.7" metalness="0.5" position="0 0.1 0"></a-cylinder>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="-0.6 4.1 0"></a-box>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="0.6 4.1 0"></a-box>
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-light type="point" color="#ffe4a0" intensity="1.5" distance="11" decay="2" position="0 4.1 0"></a-light>
+  </a-entity>
+
+  <a-entity position="-4.3 0 -19">
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" position="0 0.1 0"></a-cylinder>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-light type="point" color="#ffe4a0" intensity="1.2" distance="10" decay="2" position="0 4.1 0"></a-light>
+  </a-entity>
+
+  <!-- RIGHT LAMPS (mirrored) -->
+  <a-entity position="4.3 0 -3">
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" position="0 0.1 0"></a-cylinder>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-light type="point" color="#ffe4a0" intensity="1.8" distance="12" decay="2" position="0 4.1 0"></a-light>
+  </a-entity>
+
+  <a-entity position="4.3 0 -11">
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" position="0 0.1 0"></a-cylinder>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-light type="point" color="#ffe4a0" intensity="1.5" distance="11" decay="2" position="0 4.1 0"></a-light>
+  </a-entity>
+
+  <a-entity position="4.3 0 -19">
+    <a-cylinder radius="0.055" height="4.2" color="#3a2a10" roughness="0.6" metalness="0.4" position="0 2.1 0"></a-cylinder>
+    <a-cylinder radius="0.15" height="0.2" color="#2a1e08" position="0 0.1 0"></a-cylinder>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
+    <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
+    <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-light type="point" color="#ffe4a0" intensity="1.2" distance="10" decay="2" position="0 4.1 0"></a-light>
+  </a-entity>
+
+  <!-- ══════════════════════════════════════════════
+       BANNER FLAGS on lamp posts
+  ══════════════════════════════════════════════ -->
+  <a-plane position="-4.3 3.5 -3" width="0.5" height="0.7"
+    material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;roughness:0.8" rotation="0 0 0"
+    animation="property:rotation;from:0 -5 0;to:0 5 0;dur:2000;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+  <a-plane position="4.3 3.5 -3" width="0.5" height="0.7"
+    material="color:#8b1a1a;emissive:#8b1a1a;emissiveIntensity:0.1;roughness:0.8"
+    animation="property:rotation;from:0 -5 0;to:0 5 0;dur:2400;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+  <a-plane position="-4.3 3.5 -11" width="0.5" height="0.7"
+    material="color:#1a5c2a;emissive:#1a5c2a;emissiveIntensity:0.1;roughness:0.8"
+    animation="property:rotation;from:0 -5 0;to:0 5 0;dur:2200;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+  <a-plane position="4.3 3.5 -11" width="0.5" height="0.7"
+    material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.1;roughness:0.8"
+    animation="property:rotation;from:0 -5 0;to:0 5 0;dur:2600;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+  <!-- ══════════════════════════════════════════════
+       CASTLE — end of Main Street
+  ══════════════════════════════════════════════ -->
+
+  <!-- Castle base wall with arch detail -->
+  <a-box position="0 2 -30" width="20" height="4" depth="2.5"
+    material="color:#140c22;roughness:0.97"></a-box>
+  <!-- Arch opening -->
+  <a-cylinder position="0 3 -29.5" radius="2" height="3" color="#0a0616" rotation="90 0 0"></a-cylinder>
+  <!-- Portcullis suggestion -->
+  <a-box position="0 2.5 -29.3" width="2.8" height="3.5" depth="0.1"
+    material="color:#1a1228;roughness:0.9" opacity="0.8"></a-box>
+
+  <!-- Main center tower -->
+  <a-box position="0 12 -30" width="4" height="20" depth="4"
+    material="color:#110a1e;roughness:0.97"></a-box>
+  <!-- Center spire -->
+  <a-cone position="0 23 -30" radius-bottom="2.5" radius-top="0.06" height="7"
+    material="color:#1e0f38;roughness:0.8;metalness:0.1"></a-cone>
+  <!-- Spire flag -->
+  <a-plane position="0.8 26.5 -30" width="0.6" height="0.4"
+    material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.3"
+    animation="property:rotation;from:0 -8 0;to:0 8 0;dur:1800;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+  <!-- Left main tower -->
+  <a-box position="-6 9 -30" width="3" height="14" depth="3"
+    material="color:#0f0819;roughness:0.97"></a-box>
+  <a-cone position="-6 16.8 -30" radius-bottom="1.9" radius-top="0.06" height="5.5"
+    material="color:#1a0e30;roughness:0.8;metalness:0.1"></a-cone>
+  <!-- Right main tower -->
+  <a-box position="6 9 -30" width="3" height="14" depth="3"
+    material="color:#0f0819;roughness:0.97"></a-box>
+  <a-cone position="6 16.8 -30" radius-bottom="1.9" radius-top="0.06" height="5.5"
+    material="color:#1a0e30;roughness:0.8;metalness:0.1"></a-cone>
+
+  <!-- Outer towers -->
+  <a-box position="-11 6.5 -30" width="2" height="9" depth="2"
+    material="color:#0d0718;roughness:0.97"></a-box>
+  <a-cone position="-11 11.5 -30" radius-bottom="1.2" radius-top="0.05" height="4"
+    material="color:#120a22;roughness:0.8"></a-cone>
+  <a-box position="11 6.5 -30" width="2" height="9" depth="2"
+    material="color:#0d0718;roughness:0.97"></a-box>
+  <a-cone position="11 11.5 -30" radius-bottom="1.2" radius-top="0.05" height="4"
+    material="color:#120a22;roughness:0.8"></a-cone>
+
+  <!-- Connecting wall sections -->
+  <a-box position="-3 5.5 -30" width="3" height="7" depth="2"
+    material="color:#100820;roughness:0.97"></a-box>
+  <a-box position="3 5.5 -30" width="3" height="7" depth="2"
+    material="color:#100820;roughness:0.97"></a-box>
+  <a-box position="-8.5 4.5 -30" width="3" height="5" depth="2"
+    material="color:#0e0718;roughness:0.97"></a-box>
+  <a-box position="8.5 4.5 -30" width="3" height="5" depth="2"
+    material="color:#0e0718;roughness:0.97"></a-box>
+
+  <!-- Castle windows glowing -->
+  <a-plane position="-6 11 -28.5" width="0.8" height="1.1"
+    material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.7;opacity:0.9"></a-plane>
+  <a-plane position="6 11 -28.5" width="0.8" height="1.1"
+    material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.7;opacity:0.9"></a-plane>
+  <a-plane position="0 15 -28.5" width="1.0" height="1.4"
+    material="color:#ffe8b0;emissive:#ffd080;emissiveIntensity:0.8;opacity:0.9"></a-plane>
+
+  <!-- Castle dramatic lighting -->
+  <a-light type="point" color="#d4af37" intensity="3.5" position="0 3 -26" distance="22" decay="1.5"></a-light>
+  <a-light type="point" color="#ff7020" intensity="1.8" position="-7 4 -26" distance="12" decay="2"></a-light>
+  <a-light type="point" color="#ff7020" intensity="1.8" position="7 4 -26" distance="12" decay="2"></a-light>
+  <a-light type="point" color="#6070ff" intensity="0.8" position="0 18 -30" distance="25" decay="2"></a-light>
+  <!-- Upward wash on spires -->
+  <a-light type="spot" color="#d4af37" intensity="2.0" position="0 1 -24"
+    target="0 25 -30" angle="25" penumbra="0.3" distance="35" decay="1.5"></a-light>
+
+  <!-- ══════════════════════════════════════════════
+       FIREFLY SPARKLES
+  ══════════════════════════════════════════════ -->
+  <a-sphere position="-2.2 1.9 -5" radius="0.045"
+    material="color:#d4af37;emissive:#d4af37;emissiveIntensity:3"
+    animation__p="property:position;to:-2.5 2.6 -5.3;dur:3000;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:1;to:0.05;dur:2000;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="2.8 1.6 -8" radius="0.035"
+    material="color:#7ec8e3;emissive:#7ec8e3;emissiveIntensity:3"
+    animation__p="property:position;to:2.4 2.4 -7.8;dur:3500;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:0.9;to:0.05;dur:2500;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-1.8 2.3 -14" radius="0.035"
+    material="color:#fff0a0;emissive:#fff0a0;emissiveIntensity:3"
+    animation__p="property:position;to:-2.1 3.0 -14.2;dur:2800;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:0.8;to:0.05;dur:3200;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="1.2 1.7 -4" radius="0.04"
+    material="color:#ffa0c0;emissive:#ffa0c0;emissiveIntensity:3"
+    animation__p="property:position;to:1.6 2.5 -4.4;dur:4000;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:0.8;to:0.04;dur:2200;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="-3.2 1.5 -11" radius="0.033"
+    material="color:#d4af37;emissive:#d4af37;emissiveIntensity:3"
+    animation__p="property:position;to:-3.5 2.2 -11.3;dur:3200;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:0.85;to:0.05;dur:2800;dir:alternate;loop:true"></a-sphere>
+  <a-sphere position="3.5 2.0 -16" radius="0.038"
+    material="color:#c0e0ff;emissive:#c0e0ff;emissiveIntensity:3"
+    animation__p="property:position;to:3.2 2.8 -16.3;dur:3600;dir:alternate;loop:true;easing:easeInOutSine"
+    animation__o="property:opacity;from:0.75;to:0.04;dur:2400;dir:alternate;loop:true"></a-sphere>
+
+  <!-- ══════════════════════════════════════════════
+       CLAUDE PANEL
+  ══════════════════════════════════════════════ -->
+  <a-entity id="claude-panel" position="0 1.6 -2.6">
+    <!-- Subtle glow halo -->
+    <a-plane width="2.6" height="1.9" material="color:#3040c0;emissive:#3040c0;emissiveIntensity:0.15" position="0 0 -0.08" opacity="0.15"></a-plane>
+    <!-- Panel -->
+    <a-plane width="2.2" height="1.5" material="color:#04020e;roughness:0.5;metalness:0.2" opacity="0.95"></a-plane>
+    <!-- Gold border -->
+    <a-plane width="2.26" height="1.56" color="#d4af37" opacity="0.25" position="0 0 -0.002"></a-plane>
+    <!-- Header -->
+    <a-plane width="2.2" height="0.27" material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.12" opacity="0.15" position="0 0.615 0.002"></a-plane>
+
+    <a-text value="✦  CLAUDE  ✦" color="#d4af37" align="center" width="2" position="0 0.615 0.014" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+    <a-text value="Main Street Magic" color="#7ec8e3" align="center" width="1.6" position="0 0.43 0.014" font="https://cdn.aframe.io/fonts/Exo2SemiBold.fnt"></a-text>
+    <a-text id="vr-display" value="Welcome, traveler.&#10;Ask me anything below." color="#f5e6c8" align="left" width="1.95" position="-0.9 0.28 0.014" wrap-count="44" baseline="top"></a-text>
+    <a-plane width="1.95" height="0.004" material="color:#d4af37;emissive:#d4af37;emissiveIntensity:0.3" opacity="0.4" position="0 -0.43 0.012"></a-plane>
+    <a-text id="vr-status" value="Use the chat panel below" color="#d4af37" align="center" width="1.8" opacity="0.45" position="0 -0.61 0.014" font="https://cdn.aframe.io/fonts/Exo2SemiBold.fnt"></a-text>
+
+    <!-- Panel glow light -->
+    <a-light type="point" color="#4060ff" intensity="0.4" position="0 0 0.6" distance="3" decay="2"></a-light>
+  </a-entity>
+
+  <!-- ══════════════════════════════════════════════
+       CAMERA RIG
+  ══════════════════════════════════════════════ -->
+  <a-entity id="rig" position="0 0 2">
     <a-entity
       camera
       look-controls="pointerLockEnabled: true; magicWindowTrackingEnabled: true"
-      wasd-controls="acceleration: 12; fly: false"
+      wasd-controls="acceleration: 14; fly: false"
       position="0 1.6 0"
     ></a-entity>
   </a-entity>
@@ -305,7 +669,7 @@
   <div id="chat-box">
     <div id="chat-log">
       <div class="msg system">✦ Welcome to Main Street Magic ✦</div>
-      <div class="msg system">Click the scene to look around · WASD to walk · Ask Claude anything</div>
+      <div class="msg system">Click scene to look · WASD to walk · Ask Claude anything</div>
     </div>
     <div id="input-row">
       <input type="text" id="user-input" placeholder="Ask Claude something..." autocomplete="off" />
@@ -318,22 +682,14 @@
 
 <script>
 const SYSTEM = `You are Claude, a warm AI assistant appearing as a glowing panel on a nighttime Disneyland-inspired Main Street in VR. Be helpful and conversational. Keep responses concise — 2-4 sentences is ideal since the user may be in VR. Bring warmth and a touch of magic, but keep it natural. Answer any question.`;
-
 const history = [];
 
 async function askClaude(msg) {
   history.push({ role: "user", content: msg });
   const res = await fetch("https://restless-glade-a1e4.andpcooke.workers.dev", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1000,
-      system: SYSTEM,
-      messages: history
-    })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 1000, system: SYSTEM, messages: history })
   });
   const data = await res.json();
   const reply = data.content?.find(b => b.type === "text")?.text || "The magic seems to be resting — try again?";
@@ -399,7 +755,6 @@ async function send(text) {
 document.getElementById('send-btn').addEventListener('click', () => send(document.getElementById('user-input').value));
 document.getElementById('user-input').addEventListener('keydown', e => { if (e.key === 'Enter') send(e.target.value); });
 
-// Voice
 const micBtn = document.getElementById('mic-btn');
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -412,11 +767,8 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     if (micBtn.classList.contains('listening')) rec.stop();
     else try { rec.start(); } catch(e) {}
   });
-} else {
-  micBtn.style.opacity = '0.3';
-}
+} else { micBtn.style.opacity = '0.3'; }
 
-// Hide overlay in VR
 const scene = document.querySelector('a-scene');
 scene.addEventListener('enter-vr', () => { document.getElementById('overlay').style.display = 'none'; });
 scene.addEventListener('exit-vr', () => { document.getElementById('overlay').style.display = 'flex'; });
