@@ -821,11 +821,17 @@ function wrap(text, max = 44) {
 
 function setVRDisplay(user, claude) {
   const panel = document.querySelector('#claude-panel');
-  const el = document.querySelector('#vr-display');
-  const st = document.querySelector('#vr-status');
   if (panel) panel.setAttribute('visible', 'true');
-  if (el) el.setAttribute('value', `You: ${wrap(user, 40)}\n\nClaude: ${wrap(claude, 40)}`);
-  if (st) st.setAttribute('value', '');
+  const texts = panel ? panel.querySelectorAll('a-text') : [];
+  // vr-display is the a-text with baseline="top" (4th a-text in panel)
+  texts.forEach(t => {
+    if (t.getAttribute('baseline') === 'top') {
+      t.setAttribute('value', `You: ${wrap(user, 40)}\n\nClaude: ${wrap(claude, 40)}`);
+    }
+    if (t.getAttribute('opacity') === '0.45') {
+      t.setAttribute('value', '');
+    }
+  });
 }
 
 function addMsg(role, text) {
@@ -849,12 +855,15 @@ async function send(text) {
   document.getElementById('user-input').value = '';
   addMsg('user', text);
   setLoading(true);
-  const d = document.querySelector('#vr-display');
-  const st = document.querySelector('#vr-status');
   const panel = document.querySelector('#claude-panel');
-  if (panel) panel.setAttribute('visible', 'true');
-  if (d) d.setAttribute('value', `You: ${wrap(text, 40)}\n\nClaude: ✦ thinking...`);
-  if (st) st.setAttribute('value', '');
+  if (panel) {
+    panel.setAttribute('visible', 'true');
+    panel.querySelectorAll('a-text').forEach(t => {
+      if (t.getAttribute('baseline') === 'top') {
+        t.setAttribute('value', `You: ${wrap(text, 40)}\n\nClaude: ✦ thinking...`);
+      }
+    });
+  }
   try {
     const reply = await askClaude(text);
     addMsg('claude', reply);
