@@ -747,7 +747,7 @@
       </a-entity><!-- end companion-body -->
 
       <!-- ── SPEECH PANEL — floats above companion ── -->
-      <a-entity id="claude-panel" position="0.6 2.6 0">
+      <a-entity id="claude-panel" position="0.6 2.6 0" visible="false">
         <!-- Subtle glow halo -->
         <a-plane width="2.6" height="1.9" material="color:#3040c0;emissive:#3040c0;emissiveIntensity:0.12" position="0 0 -0.08" opacity="0.12"></a-plane>
         <!-- Panel -->
@@ -820,8 +820,10 @@ function wrap(text, max = 44) {
 }
 
 function setVRDisplay(user, claude) {
-  const el = document.getElementById('vr-display');
-  const st = document.getElementById('vr-status');
+  const panel = document.querySelector('#claude-panel');
+  const el = document.querySelector('#vr-display');
+  const st = document.querySelector('#vr-status');
+  if (panel) panel.setAttribute('visible', 'true');
   if (el) el.setAttribute('value', `You: ${wrap(user, 40)}\n\nClaude: ${wrap(claude, 40)}`);
   if (st) st.setAttribute('value', '');
 }
@@ -847,8 +849,10 @@ async function send(text) {
   document.getElementById('user-input').value = '';
   addMsg('user', text);
   setLoading(true);
-  const d = document.getElementById('vr-display');
-  const st = document.getElementById('vr-status');
+  const d = document.querySelector('#vr-display');
+  const st = document.querySelector('#vr-status');
+  const panel = document.querySelector('#claude-panel');
+  if (panel) panel.setAttribute('visible', 'true');
   if (d) d.setAttribute('value', `You: ${wrap(text, 40)}\n\nClaude: ✦ thinking...`);
   if (st) st.setAttribute('value', '');
   try {
