@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude VR — Main Street Magic</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Post-processing (bloom) -->
-  <script src="https://cdn.jsdelivr.net/gh/akbartus/A-Frame-Component-Postprocessing@main/dist/post-processing.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lato:wght@300;400&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -67,7 +66,6 @@
 <body>
 
 <a-scene
-  post-processing="effect: bloom; bloomParams: threshold: 0.3, strength: 0.9, radius: 0.6, exposure: 1.1"
   fog="type: exponential; color: #08051a; density: 0.014"
   renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; logarithmicDepthBuffer: true"
   shadow="type: pcfsoft"
@@ -455,7 +453,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="0.6 4.1 0"></a-box>
     <!-- Lamp globes -->
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <!-- Lamp light -->
     <a-light type="point" color="#ffe4a0" intensity="1.8" position="0 4.1 0" distance="12" decay="2"></a-light>
   </a-entity>
@@ -466,7 +466,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="-0.6 4.1 0"></a-box>
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" roughness="0.6" metalness="0.4" position="0.6 4.1 0"></a-box>
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-light type="point" color="#ffe4a0" intensity="1.5" distance="11" decay="2" position="0 4.1 0"></a-light>
   </a-entity>
 
@@ -476,7 +478,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-light type="point" color="#ffe4a0" intensity="1.2" distance="10" decay="2" position="0 4.1 0"></a-light>
   </a-entity>
 
@@ -487,7 +491,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-light type="point" color="#ffe4a0" intensity="1.8" distance="12" decay="2" position="0 4.1 0"></a-light>
   </a-entity>
 
@@ -497,7 +503,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-light type="point" color="#ffe4a0" intensity="1.5" distance="11" decay="2" position="0 4.1 0"></a-light>
   </a-entity>
 
@@ -507,7 +515,9 @@
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="-0.6 4.1 0"></a-box>
     <a-box width="1.4" height="0.055" depth="0.055" color="#3a2a10" position="0.6 4.1 0"></a-box>
     <a-sphere radius="0.2" position="-1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="-1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-sphere radius="0.2" position="1.25 4.1 0" material="color:#fff8e0;emissive:#ffe8a0;emissiveIntensity:2.5;roughness:0.1"></a-sphere>
+    <a-sphere radius="0.42" position="1.25 4.1 0" material="color:#ffe4a0;emissive:#ffe4a0;emissiveIntensity:1.5;transparent:true;opacity:0.18;roughness:1"></a-sphere>
     <a-light type="point" color="#ffe4a0" intensity="1.2" distance="10" decay="2" position="0 4.1 0"></a-light>
   </a-entity>
 
